@@ -2,22 +2,36 @@ import os
 import datetime
 import pandas as pd
 from extensions import db
+from typing import List
 from flask import request, current_app
 from flask_restx import Resource
-from sqlalchemy import and_, literal
+from sqlalchemy import and_, not_, literal, func
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.functions import coalesce
 from marshmallow import ValidationError
-from shared import BaseResource
-from .file_handler import CensusUploadHandler
+from shared import BaseResource, BaseListResource
+from .file_handler import CensusUploadHandler, RateUploadHandler
 
 from . import models as md
 from . import schemas as sch
+from . import mixins as mix
 
 
-class CensusMaster(BaseResource):
+class CRUDCensusMaster(BaseResource):
     model = md.ModelCensusMaster
     schema = sch.SchemaCensusMaster()
+
+    RETRIEVE_EXCLUDE_FIELDS = ["census_details"]
+
+    @classmethod
+    def retrieve(cls, id, *args, **kwargs):
+        obj = cls.model.get(id)
+        exclude = [
+            field
+            for field in cls.RETRIEVE_EXCLUDE_FIELDS
+            if field not in kwargs.get("field_mask", [])
+        ]
+        return sch.SchemaCensusMaster(exclude=exclude).dump(obj)
 
     @classmethod
     def update(cls, id, data, *args, **kwargs):
@@ -44,31 +58,74 @@ class CensusMaster(BaseResource):
             raise e
 
 
-class RateMaster(BaseResource):
+class CRUDCensusMasterDropdownList(BaseListResource):
+    model = md.ModelCensusMaster
+    schema = sch.SchemaCensusMasterDropdown(many=True)
+
+    @classmethod
+    def list(cls, name, *args, **kwargs):
+        offset = kwargs.get("offset", 0)
+        limit = kwargs.get("limit", 20)
+        fuzzy_search = "%" + "%".join(list(name)) + "%"
+        obj = (
+            cls.model.query.filter(cls.model.census_name.ilike(fuzzy_search))
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+        return cls.schema.dump(obj)
+
+
+class CensusStats(mix.CensusStatsMixin, Resource):
+    @classmethod
+    def get(cls, id, *args, **kwargs):
+        stats = cls.get_stats(id)
+        return stats, 200
+
+
+class CRUDCensusDetailList(BaseListResource):
+    model = md.ModelCensusDetail
+    schema = sch.SchemaCensusDetail(many=True)
+
+    @classmethod
+    def get_filters(cls, args):
+        filters = {}
+        for k, v in args.items():
+            if k in cls.model.__table__.columns:
+                filters[k] = v
+        return filters
+
+    @classmethod
+    def list(cls, id, *args, **kwargs):
+        offset = kwargs.get("offset", 0)
+        limit = kwargs.get("limit", 100)
+        # sortby = getattr(cls.model, kwargs.get("sort", "census_detail_id"))
+        obj = (
+            cls.model.query.filter(cls.model.census_master_id == id)
+            .filter_by(**cls.get_filters(request.args))
+            # .order_by(sortby.desc() if desc == "Y" else sortby)
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+        return cls.schema.dump(obj)
+
+
+class CRUDRateMaster(mix.RateDetailMixin, BaseResource):
     model = md.ModelRateMaster
     schema = sch.SchemaRateMaster()
 
-    @classmethod
-    def unbounded_min(cls, data, umin="N", default_umin_value=-9999):
-        if umin != "Y":
-            return data
-        data = sorted(data, key=lambda x: x["lower_age"])
-        data[0]["lower_age"] = default_umin_value
-        return data
+    RETRIEVE_EXCLUDE_FIELDS = ["rate_details"]
 
     @classmethod
-    def unbounded_max(cls, data, umax="N", default_umax_value=9999):
-        if umax != "Y":
-            return data
-        data = sorted(data, key=lambda x: x["upper_age"])
-        data[-1]["upper_age"] = default_umax_value
-        return data
-
-    @classmethod
-    def modify_rate_details(cls, data, *args, **kwargs):
-        data = cls.unbounded_min(data, kwargs.get("umin", "N"))
-        data = cls.unbounded_max(data, kwargs.get("umax", "N"))
-        return data
+    def retrieve(cls, id, *args, **kwargs):
+        obj = cls.model.get(id)
+        exclude = [
+            field
+            for field in cls.RETRIEVE_EXCLUDE_FIELDS
+            if field not in kwargs.get("field_mask", [])
+        ]
+        return sch.SchemaRateMaster(exclude=exclude).dump(obj)
 
     @classmethod
     def update(cls, id, data, *args, **kwargs):
@@ -103,80 +160,119 @@ class RateMaster(BaseResource):
         return super().patch(id, *args, **request.args)
 
 
-class SaveAgeCalc(Resource):
+class CRUDRateMasterDropdownList(BaseListResource):
+    model = md.ModelRateMaster
+    schema = sch.SchemaRateMasterDropdown(many=True)
+
     @classmethod
-    def calc_save_age_data(cls, validated_data):
-        CENSUS = md.ModelCensusDetail
-        SAVE_AGE_RATE = md.ModelRateDetail
-        NEW_RATE = aliased(md.ModelRateDetail)
-
-        new_effective_date = datetime.datetime.strptime(
-            validated_data["effective_date"], "%Y-%m-%d"
-        ).date()
-
-        output = (
-            db.session.query(
-                CENSUS.census_detail_id,
-                CENSUS.relationship,
-                CENSUS.tobacco_disposition,
-                CENSUS.issue_age,
-                CENSUS.birthdate,
-                CENSUS.effective_date.label("save_age_effective_date"),
-                literal(new_effective_date).label("new_effective_date"),
-                SAVE_AGE_RATE.rate.label("save_age_rate"),
-                NEW_RATE.rate.label("new_rate"),
-                (coalesce(NEW_RATE.rate, 0) - coalesce(SAVE_AGE_RATE.rate, 0)).label(
-                    "diff"
-                ),
-            )
-            .select_from(CENSUS)
-            .join(
-                SAVE_AGE_RATE,
-                and_(
-                    SAVE_AGE_RATE.rate_master_id == validated_data["rate_master_id"],
-                    CENSUS.relationship == SAVE_AGE_RATE.relationship,
-                    CENSUS.tobacco_disposition == SAVE_AGE_RATE.tobacco_disposition,
-                    CENSUS.issue_age >= SAVE_AGE_RATE.lower_age,
-                    CENSUS.issue_age <= SAVE_AGE_RATE.upper_age,
-                ),
-                isouter=True,
-            )
-            .join(
-                NEW_RATE,
-                and_(
-                    NEW_RATE.rate_master_id == validated_data["rate_master_id"],
-                    CENSUS.relationship == NEW_RATE.relationship,
-                    CENSUS.tobacco_disposition == NEW_RATE.tobacco_disposition,
-                    CENSUS.issue_age_as_of(validated_data["effective_date"])
-                    >= NEW_RATE.lower_age,
-                    CENSUS.issue_age_as_of(validated_data["effective_date"])
-                    <= NEW_RATE.upper_age,
-                ),
-                isouter=True,
-            )
-            .filter(
-                CENSUS.census_master_id == validated_data["census_master_id"],
-            )
+    def list(cls, name, *args, **kwargs):
+        offset = kwargs.get("offset", 0)
+        limit = kwargs.get("limit", 20)
+        fuzzy_search = "%" + "%".join(list(name)) + "%"
+        obj = (
+            cls.model.query.filter(cls.model.rate_master_name.ilike(fuzzy_search))
+            .limit(limit)
+            .offset(offset)
             .all()
         )
-        return output
+        return cls.schema.dump(obj)
+
+
+class SaveAgeCalc(mix.SaveAgeQueryMixin, Resource):
+    @classmethod
+    def apply_operator(cls, col, op, val):
+        if op == "greaterThan":
+            return col > val
+        elif op == "lessThan":
+            return col < val
+        elif op == "equals":
+            return col == val
+        elif op == "notEqual":
+            return col != val
+        elif op == "greaterThanOrEqual":
+            return col >= val
+        elif op == "lessThanOrEqual":
+            return col <= val
+        elif op == "contains":
+            return col.contains(val)
+        elif op == "notContains":
+            return not_(col.contains(val))
+        else:
+            raise ValueError("Invalid operator")
+
+    @classmethod
+    def filter_parser(cls, filter_string: str):
+        """
+        Parses a filter string into a list of SQLAlchemy filter objects
+        Required format is `column::operator::value`
+        Multiple filters can be separated by `;;`
+        """
+        output_filters = []
+        filters = filter_string.split(";;")
+
+        for cond in filters:
+            ft = cond.split("::")
+            if len(ft) != 3:
+                raise ValueError("Invalid filter format")
+            col = getattr(md.ModelCensusDetail, ft[0])
+            if col is None:
+                raise ValueError("Invalid column name")
+            output_filters.append(cls.apply_operator(col, ft[1], ft[2]))
+        return output_filters
+
+    @classmethod
+    def sort_parser(cls, qry_columns: List[str], sort_string: str = None):
+        if not sort_string:
+            return None
+        sort_colnames = sort_string.split(",")
+        sort_cols = []
+        for col in sort_colnames:
+            desc = False
+            if col[0] == "-":
+                desc = True
+                col = col[1:]
+
+            if col not in qry_columns:
+                raise ValueError("Invalid column name")
+
+            sort_cols.append(col + " " + ("desc" if desc else "asc"))
+        return ",".join(sort_cols)
 
     @classmethod
     def post(cls, *args, **kwargs):
         data = request.get_json()
+        offset = request.args.get("offset", 0)
+        limit = request.args.get("limit", 100)
+        filter_string = request.args.get("filters")
+        qry = cls.base_save_age_query(data, offset, limit)
+        qry_columns = [col.get("name") for col in qry.column_descriptions]
+
+        try:
+            filters = cls.filter_parser(filter_string) if filter_string else []
+            sort = cls.sort_parser(qry_columns, request.args.get("sort"))
+        except ValueError as e:
+            return {"status": "error", "msg": str(e)}, 400
+
         try:
             sch.SchemaSaveAgeInputs().load(data)
         except ValidationError as e:
             return {"status": "error", "msg": e.messages}, 400
 
-        result = cls.calc_save_age_data(data)
-        return sch.SchemaSaveAgeOutput(many=True).dump(result), 200
+        data = cls.calc_save_age_data(
+            qry, filters=filters, sorts=sort, offset=offset, limit=limit
+        )
+        stats = cls.calc_save_age_stats(qry)
+        return {
+            "data": sch.SchemaSaveAgeOutput(many=True).dump(data),
+            "stats": stats,
+        }, 200
 
 
 class CensusUpload(Resource):
     @classmethod
     def post(cls, *args, **kwargs):
         uploaded_file = request.files["file"]
+        custom_filename = request.form.get("name", uploaded_file.filename)
         filename = uploaded_file.filename
         if filename == "":
             return {"status": "error", "msg": "No file selected"}, 400
@@ -184,7 +280,27 @@ class CensusUpload(Resource):
         if file_ext not in current_app.config["FILE_UPLOAD_EXTENSIONS"]:
             return {"status": "error", "msg": "Invalid file format"}, 400
 
-        file_handler = CensusUploadHandler(uploaded_file)
+        file_handler = CensusUploadHandler(uploaded_file, filename=custom_filename)
         census_master = file_handler.save()
-        output_data = sch.SchemaCensusMaster().dump(census_master)
-        return {"status": "success", "data": output_data}, 200
+        output_data = sch.SchemaCensusMaster(exclude=("census_details",)).dump(
+            census_master
+        )
+        return output_data, 200
+
+
+class RateUpload(Resource):
+    @classmethod
+    def post(cls, *args, **kwargs):
+        uploaded_file = request.files["file"]
+        custom_filename = request.form.get("name", uploaded_file.filename)
+        filename = uploaded_file.filename
+        if filename == "":
+            return {"status": "error", "msg": "No file selected"}, 400
+        file_ext = os.path.splitext(filename)[1]
+        if file_ext not in current_app.config["FILE_UPLOAD_EXTENSIONS"]:
+            return {"status": "error", "msg": "Invalid file format"}, 400
+
+        file_handler = RateUploadHandler(uploaded_file, filename=custom_filename)
+        rate_master = file_handler.save(**request.args)
+        output_data = sch.SchemaRateMaster(exclude=("rate_details",)).dump(rate_master)
+        return output_data, 200

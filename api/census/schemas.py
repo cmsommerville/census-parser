@@ -22,11 +22,25 @@ class SchemaCensusMaster(BaseSchema):
     census_details = ma.Nested(SchemaCensusDetail, many=True)
 
 
+class SchemaCensusMasterDropdown(BaseSchema):
+    census_master_id = ma.Integer(data_key="id")
+    census_name = ma.String(data_key="name")
+
+
 class SchemaCensusUpload(ma.Schema):
     birthdate = ma.Date()
     relationship = ma.String()
     tobacco_disposition = ma.String()
     effective_date = ma.Date()
+
+
+class SchemaRateUpload(ma.Schema):
+    rate_master_id = ma.Integer()
+    lower_age = ma.Integer()
+    upper_age = ma.Integer()
+    relationship = ma.String()
+    tobacco_disposition = ma.String()
+    rate = ma.Float()
 
 
 class SchemaRateDetail(BaseSchema):
@@ -45,6 +59,11 @@ class SchemaRateMaster(BaseSchema):
         include_fk = True
 
     rate_details = ma.Nested(SchemaRateDetail, many=True)
+
+
+class SchemaRateMasterDropdown(BaseSchema):
+    rate_master_id = ma.Integer(data_key="id")
+    rate_master_name = ma.String(data_key="name")
 
 
 class SchemaSaveAgeInputs(ma.Schema):

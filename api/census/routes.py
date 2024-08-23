@@ -7,12 +7,17 @@ ns_census = Namespace(
 )
 
 CENSUS_ROUTES = {
-    "/census/": res.CensusMaster,
-    "/census/<int:id>": res.CensusMaster,
+    "/census/": res.CRUDCensusMaster,
+    "/census/<int:id>": res.CRUDCensusMaster,
+    "/census/<int:id>/details": res.CRUDCensusDetailList,
+    "/census/<int:id>/stats": res.CensusStats,
     "/census/upload": res.CensusUpload,
-    "/rate": res.RateMaster,
-    "/rate/<int:id>": res.RateMaster,
+    "/rates": res.CRUDRateMaster,
+    "/rates/upload": res.RateUpload,
+    "/rates/<int:id>": res.CRUDRateMaster,
     "/save-age": res.SaveAgeCalc,
+    "/dd/census": res.CRUDCensusMasterDropdownList,
+    "/dd/rates": res.CRUDRateMasterDropdownList,
 }
 
 add_routes(ns_census, CENSUS_ROUTES)

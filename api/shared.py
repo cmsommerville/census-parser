@@ -104,12 +104,16 @@ class BaseModel(db.Model):
 class BaseResource(Resource):
     model: BaseModel
     schema: BaseSchema
+    allowed_methods: list = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
     @classmethod
     def get(cls, id, *args, **kwargs):
+        if request.method not in cls.allowed_methods:
+            return {"status": "error", "msg": "Method not allowed"}, 405
+
         try:
-            data = cls.retrieve(id, *args, **kwargs)
-            return {"status": "success", "data": data}, 200
+            data = cls.retrieve(id, *args, **request.args, **kwargs)
+            return data, 200
         except NotImplementedError as e:
             return {"status": "error", "msg": str(e)}, 405
         except Exception as e:
@@ -117,12 +121,14 @@ class BaseResource(Resource):
 
     @classmethod
     def post(cls, *args, **kwargs):
+        if request.method not in cls.allowed_methods:
+            return {"status": "error", "msg": "Method not allowed"}, 405
         if "id" in kwargs:
             return {"status": "error", "msg": "Route not implemented"}, 405
         try:
             req = request.get_json()
             data = cls.create(req, *args, **kwargs)
-            return {"status": "success", "data": data}, 201
+            return data, 201
         except NotImplementedError as e:
             return {"status": "error", "msg": str(e)}, 405
         except Exception as e:
@@ -130,10 +136,12 @@ class BaseResource(Resource):
 
     @classmethod
     def put(cls, id, *args, **kwargs):
+        if request.method not in cls.allowed_methods:
+            return {"status": "error", "msg": "Method not allowed"}, 405
         try:
             req = request.get_json()
             data = cls.replace(req, *args, **kwargs)
-            return {"status": "success", "data": data}, 201
+            return data, 201
         except NotImplementedError as e:
             return {"status": "error", "msg": str(e)}, 405
         except Exception as e:
@@ -141,10 +149,12 @@ class BaseResource(Resource):
 
     @classmethod
     def patch(cls, id, *args, **kwargs):
+        if request.method not in cls.allowed_methods:
+            return {"status": "error", "msg": "Method not allowed"}, 405
         try:
             req = request.get_json()
             data = cls.update(id, data=req, *args, **kwargs)
-            return {"status": "success", "data": data}, 201
+            return data, 201
         except NotImplementedError as e:
             return {"status": "error", "msg": str(e)}, 405
         except Exception as e:
@@ -152,6 +162,8 @@ class BaseResource(Resource):
 
     @classmethod
     def delete(cls, id, *args, **kwargs):
+        if request.method not in cls.allowed_methods:
+            return {"status": "error", "msg": "Method not allowed"}, 405
         try:
             cls.destroy(id, *args, **kwargs)
             return {"status": "success", "msg": "Successfully deleted"}
@@ -189,3 +201,25 @@ class BaseResource(Resource):
     def destroy(cls, id, *args, **kwargs):
         obj = cls.model.get(id, *args, **kwargs)
         obj.delete()
+
+
+class BaseListResource(Resource):
+    model: BaseModel
+    schema: BaseSchema
+    allowed_methods: list = ["GET"]
+
+    @classmethod
+    def get(cls, *args, **kwargs):
+        if request.method not in cls.allowed_methods:
+            return {"status": "error", "msg": "Method not allowed"}, 405
+        try:
+            data = cls.list(*args, **request.args, **kwargs)
+            return data, 200
+        except NotImplementedError as e:
+            return {"status": "error", "msg": str(e)}, 405
+        except Exception as e:
+            return {"status": "error", "msg": str(e)}, 400
+
+    @classmethod
+    def list(cls, id, *args, **kwargs):
+        raise NotImplementedError

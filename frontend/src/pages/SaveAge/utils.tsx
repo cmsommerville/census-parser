@@ -2,9 +2,9 @@ import { z } from "zod";
 import { useSearchParams } from "react-router-dom";
 import { useMemo } from "react";
 
-const SaveAgeQPCensusId = z.coerce.number().optional();
-const SaveAgeQPRateId = z.coerce.number().optional();
-const SaveAgeQPEffectiveDate = z.coerce.string().optional();
+const SaveAgeQPCensusId = z.coerce.number().nullish().optional();
+const SaveAgeQPRateId = z.coerce.number().nullish().optional();
+const SaveAgeQPEffectiveDate = z.coerce.string().nullish().optional();
 
 export const useSaveAgeQueryParams = () => {
   const [searchParams, setSearchParams] = useSearchParams();

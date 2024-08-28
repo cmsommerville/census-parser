@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 interface ComboboxTypeaheadProps {
   label?: string;
   defaultValue?: DropdownListItem;
+  newItemPlaceholder?: string;
+  onCreateNewItem?: (val: string) => Promise<DropdownListItem>;
   onSelect: (val: DropdownListItem) => void;
   placeholder?: string;
   queryOptions: (
@@ -35,12 +37,14 @@ type DropdownListItem = {
 };
 
 export default function ComboboxTypeahead({
-  label,
   defaultValue,
+  label,
+  onCreateNewItem,
   onSelect,
+  newItemPlaceholder = "Add new item...",
   placeholder = "Select an item...",
-  searchPlaceholder = "Begin typing to search...",
   queryOptions,
+  searchPlaceholder = "Begin typing to search...",
 }: ComboboxTypeaheadProps) {
   const [open, setOpen] = useState(false);
   const [commandInput, setCommandInput] = useState<string>("");
@@ -54,6 +58,13 @@ export default function ComboboxTypeahead({
     setSelection(selection);
     onSelect(selection);
     setOpen(false);
+  };
+
+  const createNewItem = async () => {
+    if (onCreateNewItem) {
+      const item = await onCreateNewItem(commandInput);
+      handleSelection(item);
+    }
   };
 
   useEffect(() => {
@@ -99,6 +110,15 @@ export default function ComboboxTypeahead({
                   : "No results found."}
               </CommandEmpty>
               <CommandGroup className="">
+                {onCreateNewItem ? (
+                  <CommandItem
+                    key={-1}
+                    value={commandInput}
+                    onSelect={createNewItem}
+                  >
+                    {newItemPlaceholder}
+                  </CommandItem>
+                ) : null}
                 {query.data
                   ? query.data.map((result) => (
                       <CommandItem

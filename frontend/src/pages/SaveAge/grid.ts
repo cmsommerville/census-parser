@@ -1,7 +1,7 @@
 import { ColDef } from "ag-grid-community";
 
 export const SAVE_AGE_COL_DEFS: ColDef[] = [
-  { headerName: "Birthdate", field: "birthdate" },
+  { headerName: "Birthdate", field: "birthdate", type: "date" },
   { headerName: "Relationship", field: "relationship" },
   { headerName: "Tobacco", field: "tobacco_disposition" },
   {
@@ -10,8 +10,16 @@ export const SAVE_AGE_COL_DEFS: ColDef[] = [
     filter: "agNumberColumnFilter",
     type: "number0",
   },
-  { headerName: "Save Age Effective Date", field: "save_age_effective_date" },
-  { headerName: "New Effective Date", field: "new_effective_date" },
+  {
+    headerName: "Save Age Effective Date",
+    field: "save_age_effective_date",
+    type: "date",
+  },
+  {
+    headerName: "New Effective Date",
+    field: "new_effective_date",
+    type: "date",
+  },
   {
     headerName: "Save Age Rate",
     field: "save_age_rate",

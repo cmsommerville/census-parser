@@ -1,12 +1,15 @@
 import { z } from "zod";
 
+export const DropdownItemSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
 export const DropdownListItemSchema = z.array(
   z.object({
     id: z.number(),
     name: z.string(),
   })
 );
-
 export const CensusDetailSchema = z.object({
   census_detail_id: z.number(),
   census_master_id: z.number(),
@@ -71,8 +74,15 @@ export const SaveAgeOutputSchema = z.object({
     save_age_rate: z.number().nullish(),
     new_rate: z.number().nullish(),
     diff: z.number().nullish(),
+    pct_range_le_0: z.number().nullish(),
+    pct_range_00_05: z.number().nullish(),
+    pct_range_05_10: z.number().nullish(),
+    pct_range_10_20: z.number().nullish(),
+    pct_range_gt_20: z.number().nullish(),
   }),
 });
+
+export type SaveAgeOutputType = z.infer<typeof SaveAgeOutputSchema>;
 
 export const CensusStatsSchema = z.object({
   tobacco_stats: z.array(

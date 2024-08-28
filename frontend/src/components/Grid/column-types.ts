@@ -4,6 +4,7 @@ import {
   ValueParserParams,
   ValueSetterParams,
 } from "ag-grid-community";
+import { parseISO } from "date-fns";
 
 type ColumnType = { [k: string]: ColDef };
 
@@ -79,6 +80,13 @@ export const COLUMN_TYPES: ColumnType = {
     valueFormatter: numericValueFormatter(3),
     valueParser: currencyValueParser,
     valueSetter: numericValueSetter,
+  },
+  date: {
+    cellClass: "text-right",
+    valueFormatter: (params: ValueFormatterParams) => {
+      if (params.value == null) return params.value;
+      return parseISO(params.value).toLocaleDateString("en-US");
+    },
   },
   dollars: {
     cellClass: "text-right",

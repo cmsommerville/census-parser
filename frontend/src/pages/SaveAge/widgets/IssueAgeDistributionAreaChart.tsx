@@ -24,6 +24,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface IssueAgeDistributionChartProps {
+  className?: string;
   data: { issue_age: number; count: number }[] | undefined;
 }
 
@@ -48,6 +49,7 @@ const calcAverageAge = (data: { issue_age: number; count: number }[]) => {
 };
 
 export const IssueAgeDistributionChart = ({
+  className,
   data,
 }: IssueAgeDistributionChartProps) => {
   const tw = useTailwindConfig();
@@ -55,7 +57,7 @@ export const IssueAgeDistributionChart = ({
   const averageAge = data && data.length > 0 ? calcAverageAge(data) : undefined;
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="w-full py-6">
         <CardTitle className="text-2xl font-semibold">
           Issue Age Distribution

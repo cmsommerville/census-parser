@@ -11,6 +11,7 @@ const Grid = ({ className, defaultColDef, ...props }: GridProps) => {
       sortable: true,
       filter: true,
       resizable: true,
+      cellClass: "text-center",
       ...defaultColDef,
     }),
     [defaultColDef]

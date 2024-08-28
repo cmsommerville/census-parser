@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format, parse, parseISO } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -16,7 +16,7 @@ import { useState } from "react";
 interface DatePickerProps {
   children?: React.ReactNode;
   dateFormat?: string;
-  defaultValue?: string;
+  defaultValue?: string | null | undefined;
   onSelect: (date: string) => void;
 }
 
@@ -34,8 +34,9 @@ export const Datepicker = ({
     onSelect(format(dt.toISOString(), "yyyy-MM-dd"));
   };
 
-  const displayDate =
-    date ?? (defaultValue ? parseISO(defaultValue) : undefined);
+  const x = defaultValue != null ? parseISO(defaultValue) : null;
+
+  const displayDate = date ? date : x;
 
   return (
     <>
@@ -51,7 +52,7 @@ export const Datepicker = ({
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayDate ? (
-              format(displayDate, dateFormat)
+              format(displayDate, "yyyy-MM-dd")
             ) : (
               <span>Pick a date</span>
             )}
@@ -60,7 +61,7 @@ export const Datepicker = ({
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
-            selected={displayDate}
+            selected={displayDate ?? new Date()}
             onSelect={selectHandler}
             initialFocus
             fixedWeeks

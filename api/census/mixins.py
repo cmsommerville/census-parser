@@ -1,6 +1,6 @@
 import datetime
 from extensions import db
-from sqlalchemy import and_, literal, func, cast, text
+from sqlalchemy import and_, literal, func, cast, text, case
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.functions import coalesce
 from . import models as md
@@ -174,16 +174,67 @@ class SaveAgeQueryMixin:
     @classmethod
     def calc_save_age_stats(cls, qry):
         subquery = qry.subquery()
-        stats = (
-            db.session.query(
-                func.count().label("count"),
-                func.sum(subquery.c.save_age_rate).label("save_age_rate"),
-                func.sum(subquery.c.new_rate).label("new_rate"),
-                func.sum(subquery.c.diff).label("diff"),
-            )
-            .one()
-            ._asdict()
+        q = db.session.query(
+            func.count().label("count"),
+            func.sum(subquery.c.save_age_rate).label("save_age_rate"),
+            func.sum(subquery.c.new_rate).label("new_rate"),
+            func.sum(subquery.c.diff).label("diff"),
+            func.count(
+                case(
+                    (
+                        subquery.c.diff / subquery.c.save_age_rate <= 0,
+                        literal(1),
+                    ),
+                    else_=None,
+                )
+            ).label("pct_range_le_0"),
+            func.count(
+                case(
+                    (
+                        and_(
+                            subquery.c.diff / subquery.c.save_age_rate > 0,
+                            subquery.c.diff / subquery.c.save_age_rate <= 0.05,
+                        ),
+                        literal(1),
+                    ),
+                    else_=None,
+                )
+            ).label("pct_range_00_05"),
+            func.count(
+                case(
+                    (
+                        and_(
+                            subquery.c.diff / subquery.c.save_age_rate > 0.05,
+                            subquery.c.diff / subquery.c.save_age_rate <= 0.1,
+                        ),
+                        literal(1),
+                    ),
+                    else_=None,
+                )
+            ).label("pct_range_05_10"),
+            func.count(
+                case(
+                    (
+                        and_(
+                            subquery.c.diff / subquery.c.save_age_rate > 0.1,
+                            subquery.c.diff / subquery.c.save_age_rate <= 0.2,
+                        ),
+                        literal(1),
+                    ),
+                    else_=None,
+                )
+            ).label("pct_range_10_20"),
+            func.count(
+                case(
+                    (
+                        subquery.c.diff / subquery.c.save_age_rate > 0.2,
+                        literal(1),
+                    ),
+                    else_=None,
+                )
+            ).label("pct_range_gt_20"),
         )
+        stats = q.one()._asdict()
         return stats
 
 

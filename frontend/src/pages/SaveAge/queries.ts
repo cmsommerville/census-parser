@@ -1,12 +1,13 @@
 import { skipToken, queryOptions } from "@tanstack/react-query";
 import { queryClient } from "@/extensions";
+import { z } from "zod";
 import {
   CensusMasterSchema,
   CensusStatsSchema,
   CensusDetailListSchema,
   DropdownListItemSchema,
-  SaveAgeOutputSchema,
   RateMasterSchema,
+  SaveAgeOutputSchema,
 } from "./schemas";
 import { FilterModel, IDatasource, SortModelItem } from "ag-grid-community";
 
@@ -126,6 +127,7 @@ const calcSaveAge = async (
 
 export const postNewCensus = async (files: File[], name?: string) => {
   const formData = new FormData();
+
   if (name) {
     formData.append("name", name);
   }
@@ -165,7 +167,7 @@ export const postNewRates = async (files: File[], name?: string) => {
 };
 
 export const CensusQueries = {
-  getCensusMaster: (id: number | undefined) => {
+  getCensusMaster: (id: number | null | undefined) => {
     return queryOptions({
       queryKey: ["census", String(id)],
       queryFn: id ? () => getCensusMaster(id) : skipToken,
@@ -190,7 +192,7 @@ export const CensusQueries = {
       placeholderData: [],
     });
   },
-  getCensusStats: (master_id: number | undefined) => {
+  getCensusStats: (master_id: number | null | undefined) => {
     return queryOptions({
       queryKey: ["census", String(master_id), "stats"],
       queryFn: master_id ? () => getCensusStatistics(master_id) : skipToken,
@@ -203,9 +205,9 @@ export const CensusQueries = {
     });
   },
   calcSaveAge: (
-    census_master_id: number | undefined,
-    rate_master_id: number | undefined,
-    effective_date: string | undefined,
+    census_master_id: number | null | undefined,
+    rate_master_id: number | null | undefined,
+    effective_date: string | null | undefined,
     filterModel: FilterModel | undefined = undefined,
     sortModel: SortModelItem[] | undefined = undefined,
     offset: number = 0,
@@ -216,14 +218,17 @@ export const CensusQueries = {
         "save-age",
         String(census_master_id),
         String(rate_master_id),
-        effective_date,
+        String(effective_date),
         String(offset),
         String(limit),
         filterModel,
         sortModel,
       ],
       queryFn:
-        !!census_master_id && !!rate_master_id && !!effective_date
+        census_master_id != null &&
+        rate_master_id != null &&
+        !!effective_date &&
+        z.string().date().safeParse(effective_date).success
           ? () =>
               calcSaveAge(
                 census_master_id,
@@ -245,7 +250,7 @@ export const CensusQueries = {
       },
     });
   },
-  getRateMaster: (id: number | undefined) => {
+  getRateMaster: (id: number | null | undefined) => {
     return queryOptions({
       queryKey: ["rates", String(id)],
       queryFn: id ? () => getRateMaster(id) : skipToken,
@@ -265,9 +270,9 @@ export const CensusQueries = {
 };
 
 export const createSaveAgeGridDatasource: (
-  census_master_id: number | undefined,
-  rate_master_id: number | undefined,
-  effective_date: string | undefined
+  census_master_id: number | null | undefined,
+  rate_master_id: number | null | undefined,
+  effective_date: string | null | undefined
 ) => IDatasource = (census_master_id, rate_master_id, effective_date) => ({
   // called by the grid when more rows are required
   getRows: async (params) => {

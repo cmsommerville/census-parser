@@ -4,10 +4,14 @@ import { Progress } from "@/components/ui/progress";
 import { CensusStatsType } from "../schemas";
 
 interface StatisticProgressBarsProps {
+  className?: string;
   data: CensusStatsType | undefined;
 }
 
-export const StatisticProgressBars = ({ data }: StatisticProgressBarsProps) => {
+export const StatisticProgressBars = ({
+  className,
+  data,
+}: StatisticProgressBarsProps) => {
   if (data == null) {
     return "Loading..."; // TODO: add skeleton components
   }
@@ -18,7 +22,7 @@ export const StatisticProgressBars = ({ data }: StatisticProgressBarsProps) => {
   );
 
   return (
-    <Card className="">
+    <Card className={className}>
       <CardHeader className="w-full pt-6 pb-3">
         <CardTitle className="text-2xl font-semibold">
           Census Statistics

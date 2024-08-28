@@ -31,6 +31,7 @@ const UploadCensusModal = ({
   const [censusName, setCensusName] = useState<string>("");
 
   const queryClient = useQueryClient();
+
   const postNewCensusMutation = useMutation({
     mutationFn: () => postNewCensus(files, censusName),
     onSuccess: (data) => {
@@ -62,17 +63,19 @@ const UploadCensusModal = ({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           {files.length ? (
-            <div>
-              <Label htmlFor="name" className="">
-                Census Name
-              </Label>
-              <Input
-                id="name"
-                defaultValue={files[0]?.name ?? ""}
-                placeholder="Enter a name for the census"
-                onChange={(e) => setCensusName(e.target.value)}
-                className=""
-              />
+            <div className="flex flex-col space-y-4">
+              <div>
+                <Label htmlFor="name" className="">
+                  Census Name
+                </Label>
+                <Input
+                  id="name"
+                  defaultValue={files[0]?.name ?? ""}
+                  placeholder="Enter a name for the census"
+                  onChange={(e) => setCensusName(e.target.value)}
+                  className=""
+                />
+              </div>
             </div>
           ) : null}
 

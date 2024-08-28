@@ -7,9 +7,22 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <MainLayout />,
+    handle: {
+      breadcrumb: () => {
+        label: "Home";
+      },
+    },
     children: [
       { path: "/", element: <App /> },
-      { path: "/save-age", element: <SaveAgeLanding /> },
+      {
+        path: "/save-age",
+        element: <SaveAgeLanding />,
+        handle: {
+          breadcrumb: () => {
+            return { label: "Save Age Report" };
+          },
+        },
+      },
     ],
   },
 ]);

@@ -49,6 +49,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            cd ${{ secrets.WORK_DIR }}
             docker compose pull
             docker compose up -d
       # - name: connect and pull

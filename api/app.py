@@ -10,9 +10,6 @@ def create_app():
     config = CONFIG.get(ENV)
     app = Flask(__name__)
     app.config.from_object(config)
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"sqlite:///{app.root_path}/{os.getenv('DATABASE_NAME')}"
-    )
 
     app, db, _, api = init_extensions(app)
 

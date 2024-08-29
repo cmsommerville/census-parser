@@ -2,7 +2,7 @@ name: census-parser
 services: 
   frontend: 
     container_name: census-parser-frontend
-    image: cmsommerville/census-parser-frontend:latest
+    image: ghcr.io/cmsommerville/census-parser-frontend:latest
     build: 
       context: ./frontend
     ports: 
@@ -11,7 +11,7 @@ services:
       - api
   api:
     container_name: census-parser-api
-    image: cmsommerville/census-parser-api:latest
+    image: ghcr.io/cmsommerville/census-parser-api:latest
     build: 
       context: ./api
     ports:

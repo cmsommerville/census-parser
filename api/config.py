@@ -10,7 +10,6 @@ class BaseConfig:
 
 
 class DevConfig(BaseConfig):
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
     SESSION_COOKIE_SECURE = False
 
 

@@ -20,12 +20,13 @@ const numericValueFormatter =
   (decimals: number, style?: string) => (params: ValueFormatterParams) => {
     if (params.value == null) return params.value;
     if (isNaN(Number(params.value))) return params.value;
-    return Number(params.value).toLocaleString("en-US", {
+    const format = {
       ...(style ? { style } : {}),
       currency: "USD",
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    });
+    } as Intl.NumberFormatOptions;
+    return Number(params.value).toLocaleString("en-US", format);
   };
 
 const currencyValueParser = (params: ValueParserParams) => {

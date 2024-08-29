@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.actor }}/census-parser:latest
 
 jobs:
   publish:
@@ -18,7 +17,7 @@ jobs:
       - name: Login
         run: echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
       - name: Build and Publish
-        run: docker build -t ${{ env.IMAGE_NAME }} . && docker push ${{ env.IMAGE_NAME }}
+        run: docker compose build && docker compose push
 
   deploy:
     needs: publish
@@ -31,7 +30,7 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_25519
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
-      - name: copy docker-compose file via ssh key
+      - name: copy docker compose file via ssh key
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -44,8 +43,8 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 
           echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
           cd ${{ secrets.WORK_DIR }}
-          docker-compose pull
-          docker-compose up -d
+          docker compose pull
+          docker compose up -d
           exit
       - name: cleanup
         run: rm -rf ~/.ssh

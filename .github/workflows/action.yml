@@ -44,7 +44,7 @@ jobs:
           target: ${{ secrets.WORK_DIR }}/docker-compose.yml
       - name: connect and pull
         run: |
-          ssh -tt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 
+          ssh -tt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -i ~/.ssh/id_25519
           echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
           cd ${{ secrets.WORK_DIR }}
           docker compose pull

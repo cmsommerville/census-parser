@@ -43,12 +43,21 @@ jobs:
           source: docker-compose.yml
           target: ${{ secrets.WORK_DIR }}/docker-compose.yml
       - name: connect and pull
-        run: |
-          ssh -tt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -i ~/.ssh/id_25519
-          echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-          cd ${{ secrets.WORK_DIR }}
-          docker compose pull
-          docker compose up -d
-          exit
-      - name: cleanup
-        run: rm -rf ~/.ssh
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker compose pull
+            docker compose up -d
+      # - name: connect and pull
+      #   run: |
+      #     ssh -tt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -i ~/.ssh/id_25519
+      #     echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+      #     cd ${{ secrets.WORK_DIR }}
+      #     docker compose pull
+      #     docker compose up -d
+      #     exit
+      # - name: cleanup
+      #   run: rm -rf ~/.ssh

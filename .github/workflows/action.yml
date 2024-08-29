@@ -37,6 +37,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: docker-compose.yml
           target: ${{ secrets.WORK_DIR }}
+          overwrite: true
       - name: connect and pull
         uses: appleboy/ssh-action@v1.0.3
         with:

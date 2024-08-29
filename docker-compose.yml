@@ -17,6 +17,6 @@ services:
     build: 
       context: ./api
     ports:
-      - 5000:5000
+      - 5002:5000
     volumes: 
       - ./api:/api

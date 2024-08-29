@@ -16,7 +16,5 @@ services:
       context: ./api
     ports:
       - "5002:5000"
-    env_file: 
-      - api/.env
     volumes: 
       - ./api:/api

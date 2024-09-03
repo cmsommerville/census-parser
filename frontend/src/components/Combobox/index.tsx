@@ -73,7 +73,7 @@ export default function ComboboxTypeahead({
     }, 100);
     return () => clearTimeout(timeout);
   }, [commandInput]);
-
+  console.log({ selection, defaultValue, placeholder });
   return (
     <div>
       {label ? <Label>{label}</Label> : null}
@@ -87,7 +87,7 @@ export default function ComboboxTypeahead({
           >
             {selection
               ? selection.name
-              : defaultValue
+              : defaultValue && defaultValue.name
               ? defaultValue.name
               : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

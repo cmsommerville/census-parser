@@ -51,7 +51,39 @@ const SaveAgeTab = () => {
               rowModelType="infinite"
               datasource={datasource}
               onFirstDataRendered={(params) => {
+                console.log(params.api.getCacheBlockState());
                 params.api.autoSizeAllColumns();
+              }}
+              overlayNoRowsTemplate={`<div className="w-full h-full bg-slate-900/10">Select a census, rates, and effective date...</div>`}
+              onGridReady={(params) => {
+                let hasData = false;
+                params.api.forEachNode((node) => {
+                  if (node.data) {
+                    hasData = true;
+                  }
+                });
+                if (!hasData) {
+                  params.api.showNoRowsOverlay();
+                } else {
+                  params.api.hideOverlay();
+                }
+              }}
+              onRowDataUpdated={(params) => {
+                let hasData = false;
+                params.api.forEachNode((node) => {
+                  if (node.data) {
+                    hasData = true;
+                  }
+                });
+                console.log({
+                  hasData,
+                  blockState: params.api.getCacheBlockState(),
+                });
+                if (!hasData) {
+                  params.api.showNoRowsOverlay();
+                } else {
+                  params.api.hideOverlay();
+                }
               }}
             />
           </CardContent>

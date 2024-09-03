@@ -15,6 +15,25 @@ export const StatisticProgressBars = ({
   if (data == null) {
     return "Loading..."; // TODO: add skeleton components
   }
+  if (data.tobacco_stats.length === 0 || data.tenure_stats.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader className="w-full pt-6 pb-3">
+          <CardTitle className="text-2xl font-semibold">
+            Census Statistics
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="w-full space-y-6">
+          <section id="tobacco-dist-stats">
+            <h3 className="text-muted-foreground my-0">
+              Please select or upload a census below to display statistics about
+              the tobacco disposition and tenure of the population!
+            </h3>
+          </section>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const tobacco_distribution = calcTobaccoPercentages(data.tobacco_stats);
   const { avg: avgTenure, max: maxTenure } = calcTenureSummaryStats(

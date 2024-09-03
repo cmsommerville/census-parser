@@ -25,7 +25,25 @@ export const NumberSaveAgeImpactedCard = ({
   className,
   query,
 }: NumberSaveAgeImpactedCardProps) => {
-  if (query.data) {
+  if (!query || !query.data || query.data.data.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader className="w-full pt-6 pb-3">
+          <CardTitle className="text-2xl font-semibold"># Impacted</CardTitle>
+        </CardHeader>
+        <CardContent className="w-full space-y-6">
+          <section id="tobacco-dist-stats">
+            <h3 className="text-muted-foreground my-0">
+              Make sure that you have selected a census, rate set, and effective
+              date below to see how many people will have rate changes!
+            </h3>
+          </section>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (query.data && !query.isPlaceholderData) {
     return (
       <Card
         className={cn(

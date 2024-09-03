@@ -52,6 +52,26 @@ export const IssueAgeDistributionChart = ({
   className,
   data,
 }: IssueAgeDistributionChartProps) => {
+  if (!data || data.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader className="w-full pt-6 pb-3">
+          <CardTitle className="text-2xl font-semibold">
+            Issue Age Distribution
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="w-full space-y-6">
+          <section id="tobacco-dist-stats">
+            <h3 className="text-muted-foreground my-0">
+              Please select or upload a census below to see the issue age
+              distribution!
+            </h3>
+          </section>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const tw = useTailwindConfig();
   const chartData = data && data.length > 0 ? calcAgeDistribution(data) : [];
   const averageAge = data && data.length > 0 ? calcAverageAge(data) : undefined;

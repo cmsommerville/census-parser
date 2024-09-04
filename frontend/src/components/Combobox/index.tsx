@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { UseQueryOptions, useQuery } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface ComboboxTypeaheadProps {
   label?: string;
@@ -54,6 +55,12 @@ export default function ComboboxTypeahead({
   );
   const query = useQuery(queryOptions(debouncedInput));
 
+  const placeholderClasses = !!selection
+    ? ""
+    : defaultValue && defaultValue.name
+    ? ""
+    : "opacity-50";
+
   const handleSelection = (selection: DropdownListItem) => {
     setSelection(selection);
     onSelect(selection);
@@ -73,7 +80,7 @@ export default function ComboboxTypeahead({
     }, 100);
     return () => clearTimeout(timeout);
   }, [commandInput]);
-  console.log({ selection, defaultValue, placeholder });
+
   return (
     <div>
       {label ? <Label>{label}</Label> : null}
@@ -83,7 +90,10 @@ export default function ComboboxTypeahead({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between font-normal px-3"
+            className={cn(
+              "w-full justify-between font-normal px-3",
+              placeholderClasses
+            )}
           >
             {selection
               ? selection.name

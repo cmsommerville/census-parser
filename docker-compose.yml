@@ -13,8 +13,10 @@ services:
     container_name: census-parser-api
     image: ghcr.io/cmsommerville/census-parser-api:latest
     environment:
-      - DATABASE_URI=sqlite:///blah.db
+      - DATABASE_URI=sqlite:////database/census-parser.db
     build: 
       context: ./api
     ports:
       - 5002:5000
+    volumes:
+      - app_db:/database

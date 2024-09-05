@@ -9,7 +9,7 @@ import { IssueAgeDistributionChart } from "./widgets/IssueAgeDistributionAreaCha
 import { NumberSaveAgeImpactedCard } from "./widgets/NumberSaveAgeImpactedCard";
 
 const SaveAgeLanding = () => {
-  const { census_master_id, rate_master_id, effective_date } =
+  const { tab, set_tab, census_master_id, rate_master_id, effective_date } =
     useSaveAgeQueryParams();
 
   const qrySaveAge = useQuery(
@@ -18,6 +18,14 @@ const SaveAgeLanding = () => {
   const qryCensusStats = useQuery(
     CensusQueries.getCensusStats(census_master_id)
   );
+
+  const handleTabChange = (tab: string) => {
+    if (!tab) {
+      set_tab("save-age");
+    } else {
+      set_tab(tab);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -36,7 +44,11 @@ const SaveAgeLanding = () => {
         />
       </div>
 
-      <Tabs defaultValue="save-age" className="">
+      <Tabs
+        defaultValue={tab ?? "save-age"}
+        onValueChange={handleTabChange}
+        className=""
+      >
         <TabsList>
           <TabsTrigger value="save-age">Save Age</TabsTrigger>
           <TabsTrigger value="census">Census</TabsTrigger>
@@ -46,7 +58,7 @@ const SaveAgeLanding = () => {
           <SaveAgeTab />
         </TabsContent>
         <TabsContent value="census">
-          <CensusTab census_master_id={census_master_id ?? -1} />
+          <CensusTab />
         </TabsContent>
         <TabsContent value="rates">
           <div>Enter rates...</div>

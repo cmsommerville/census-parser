@@ -185,7 +185,7 @@ export const CensusQueries = {
       placeholderData: [],
     });
   },
-  getCensusDetails: (master_id: number | undefined) => {
+  getCensusDetails: (master_id: number | null | undefined) => {
     return queryOptions({
       queryKey: ["census", String(master_id), "details"],
       queryFn: master_id ? () => getCensusDetails(master_id) : skipToken,

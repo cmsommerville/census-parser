@@ -5,11 +5,17 @@ import { useMemo } from "react";
 const SaveAgeQPCensusId = z.coerce.number().nullish().optional();
 const SaveAgeQPRateId = z.coerce.number().nullish().optional();
 const SaveAgeQPEffectiveDate = z.coerce.string().nullish().optional();
+const SaveAgeQPTab = z.string().nullish().optional();
 
 export const useSaveAgeQueryParams = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const params = useMemo(
     () => ({
+      tab: SaveAgeQPTab.parse(searchParams.get("tab")),
+      set_tab: (tab: string) => {
+        searchParams.set("tab", tab);
+        setSearchParams(searchParams);
+      },
       census_master_id: SaveAgeQPCensusId.parse(searchParams.get("cid")),
       set_census_master_id: (cid: number) => {
         searchParams.set("cid", cid.toString());

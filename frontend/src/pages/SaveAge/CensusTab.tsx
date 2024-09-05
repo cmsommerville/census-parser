@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Grid from "@/components/Grid";
 import { CensusQueries } from "./queries";
+import { useSaveAgeQueryParams } from "./utils";
 
 const CENSUS_COL_DEFS: ColDef[] = [
   { headerName: "Birthdate", field: "birthdate" },
@@ -19,10 +20,9 @@ const CENSUS_COL_DEFS: ColDef[] = [
   { headerName: "Effective Date", field: "effective_date" },
 ];
 
-interface CensusTabProps {
-  census_master_id: number;
-}
-const CensusTab = ({ census_master_id }: CensusTabProps) => {
+const CensusTab = () => {
+  const { census_master_id } = useSaveAgeQueryParams();
+
   const qryCensusMaster = useQuery(
     CensusQueries.getCensusMaster(census_master_id)
   );

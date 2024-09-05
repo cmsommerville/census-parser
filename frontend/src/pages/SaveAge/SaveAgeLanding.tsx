@@ -45,7 +45,7 @@ const SaveAgeLanding = () => {
       </div>
 
       <Tabs
-        defaultValue={tab ?? "save-age"}
+        value={tab ?? "save-age"}
         onValueChange={handleTabChange}
         className=""
       >

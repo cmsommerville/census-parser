@@ -8,9 +8,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: <MainLayout />,
     handle: {
-      breadcrumb: () => {
-        label: "Home";
-      },
+      breadcrumb: () => "Home",
     },
     children: [
       { path: "/", element: <App /> },
@@ -19,7 +17,7 @@ export const router = createBrowserRouter([
         element: <SaveAgeLanding />,
         handle: {
           breadcrumb: () => {
-            return { label: "Save Age Report" };
+            return "Save Age Report";
           },
         },
       },

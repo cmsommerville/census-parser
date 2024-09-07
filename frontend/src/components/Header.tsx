@@ -9,7 +9,7 @@ import {
   Users2,
   UserIcon,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useMatches } from "react-router-dom";
 
 import {
   Breadcrumb,
@@ -31,7 +31,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
+const useBreadcrumb = () => {
+  const matches = useMatches();
+  const breadcrumbs = matches
+    .filter((match) => {
+      return match?.handle;
+    })
+    .map((match) => {
+      const { handle } = match ?? {};
+      const { breadcrumb } = handle as {
+        breadcrumb: (params: any) => string;
+      };
+      return {
+        label: breadcrumb(match.params),
+        to: match.pathname,
+      };
+    });
+  return breadcrumbs;
+};
+
 const Header = () => {
+  const breadcrumbs = useBreadcrumb();
   return (
     <div className="flex flex-col sm:gap-4 sm:py-4">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -91,21 +111,18 @@ const Header = () => {
         </Sheet>
         <Breadcrumb className="hidden md:flex">
           <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="#">Dashboard</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="#">Orders</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Recent Orders</BreadcrumbPage>
-            </BreadcrumbItem>
+            {breadcrumbs.map((bc, ix) => {
+              return (
+                <div key={bc.label}>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to={bc.to}>{bc.label}</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  {ix < breadcrumbs.length - 1 ? <BreadcrumbSeparator /> : null}
+                </div>
+              );
+            })}
           </BreadcrumbList>
         </Breadcrumb>
         <div className="relative ml-auto flex-1 md:grow-0">

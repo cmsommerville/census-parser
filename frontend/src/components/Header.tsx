@@ -113,7 +113,7 @@ const Header = () => {
           <BreadcrumbList>
             {breadcrumbs.map((bc, ix) => {
               return (
-                <div key={bc.label}>
+                <div className="inline-flex items-center gap-1.5">
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
                       <Link to={bc.to}>{bc.label}</Link>

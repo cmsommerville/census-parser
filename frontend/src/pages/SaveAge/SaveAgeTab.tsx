@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Upload } from "lucide-react";
+import { Upload, Settings } from "lucide-react";
 
 import ComboboxTypeahead from "@/components/Combobox";
 import Grid from "@/components/Grid";
@@ -145,6 +145,11 @@ const SelectorSidePanel = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+
+                <button className="mt-5 w-9 h-9 p-1.5 flex items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:text-foreground md:w-8 md:h-8">
+                  <Settings />
+                  <span className="sr-only">Configure</span>
+                </button>
               </div>
             </div>
 
@@ -179,6 +184,10 @@ const SelectorSidePanel = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                <button className="mt-5 w-9 h-9 p-1.5 flex items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:text-foreground md:w-8 md:h-8">
+                  <Settings />
+                  <span className="sr-only">Configure</span>
+                </button>
               </div>
             </div>
 

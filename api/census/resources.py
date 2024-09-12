@@ -1,15 +1,9 @@
 import os
-import datetime
-import json
-import pandas as pd
-import anthropic
-from extensions import db
+from extensions import db, limiter
 from typing import List
 from flask import request, current_app
 from flask_restx import Resource
-from sqlalchemy import and_, not_, literal, func
-from sqlalchemy.orm import aliased
-from sqlalchemy.sql.functions import coalesce
+from sqlalchemy import not_
 from marshmallow import ValidationError
 from shared import BaseResource, BaseListResource
 from .file_handler import CensusUploadHandler, RateUploadHandler
@@ -353,6 +347,9 @@ class CensusParser(Resource):
     Be concise. Do not include any extraneous information.
     """
 
+    @limiter.limit("30/hour")
+    @limiter.limit("10/minute")
+    @limiter.limit("1/second")
     def post(self):
         uploaded_file = request.files["file"]
         custom_filename = request.form.get("name", uploaded_file.filename)

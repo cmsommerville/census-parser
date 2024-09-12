@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   CensusMasterSchema,
   CensusStatsSchema,
+  CensusUploadResponseSchema,
   CensusDetailListSchema,
   DropdownListItemSchema,
   RateMasterSchema,
@@ -143,7 +144,7 @@ export const postNewCensus = async (files: File[], name?: string) => {
     throw new Error("Failed to upload new census");
   }
   const data = await res.json();
-  return CensusMasterSchema.parse(data);
+  return CensusUploadResponseSchema.parse(data);
 };
 
 export const postNewRates = async (files: File[], name?: string) => {

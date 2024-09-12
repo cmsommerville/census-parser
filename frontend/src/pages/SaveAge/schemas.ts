@@ -27,6 +27,10 @@ export const CensusMasterSchema = z.object({
   census_path: z.string().optional(),
 });
 
+export const CensusUploadResponseSchema = z.object({
+  data: CensusMasterSchema,
+});
+
 export type CensusMasterType = z.infer<typeof CensusMasterSchema>;
 
 export const RateDetailSchema = z.object({

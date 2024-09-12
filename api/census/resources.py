@@ -301,14 +301,6 @@ class RateUpload(Resource):
         output_data = sch.SchemaRateMaster(exclude=("rate_details",)).dump(rate_master)
         return output_data, 200
 
-        #     col_dict["birthdate"] = col
-        # elif adjcol in RELATIONSHIP_LABELS:
-        #     col_dict["relationship"] = col
-        # elif adjcol in TOBACCO_DISPOSITION_LABELS:
-        #     col_dict["tobacco_disposition"] = col
-        # elif adjcol in EFFECTIVE_DATE_LABELS:
-        #     col_dict["effective_date"] = col
-
 
 class CensusParser(Resource):
     SYSTEM_PROMPT = """The prompt contains multiple CSV files, each as a string.
@@ -361,13 +353,12 @@ class CensusParser(Resource):
             return {"status": "error", "msg": "Invalid file format"}, 400
 
         file_handler = CensusUploadHandler(uploaded_file, filename=custom_filename)
-        config = file_handler.process()
+        file_handler.process()
+        census_master = file_handler.save()
+        output_data = sch.SchemaCensusMaster().dump(census_master)
         raw_data = file_handler.raw_data()
         return {
-            "status": "success",
-            "msg": {
-                "data": config,
-                "metadata": dict(file_handler.metadata),
-                "raw_data": raw_data,
-            },
+            "data": output_data,
+            "metadata": dict(file_handler.metadata),
+            "raw_data": raw_data,
         }, 200

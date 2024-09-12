@@ -36,7 +36,7 @@ const UploadCensusModal = ({
     mutationFn: () => postNewCensus(files, censusName),
     onSuccess: (data) => {
       if (onUploadSuccess) {
-        onUploadSuccess(data);
+        onUploadSuccess(data.data);
       }
       setFiles([]);
       setCensusName("");

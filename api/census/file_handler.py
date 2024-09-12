@@ -147,7 +147,9 @@ class CensusUploadHandler(mix.CensusProcessorLLMMixin, BaseFileHandler):
         # map the columns to the standard schema
         dfs = self.map_columns(dfs, census_config)
         # save the data to the database
-        return self.stack(dfs)
+
+        self.processed_data = self.stack(dfs)
+        return self.processed_data
 
     def save(self):
         # create the census master record w/o details
@@ -161,12 +163,11 @@ class CensusUploadHandler(mix.CensusProcessorLLMMixin, BaseFileHandler):
         db.session.flush()
 
         # create the census details
-        df_detail = self.read()
-        df_detail["census_master_id"] = census_master.census_master_id
-        census_detail_dict = sch.SchemaCensusUpload(many=True).dump(
-            df_detail.to_dict(orient="records")
-        )
-        census_details = sch.SchemaCensusDetail(many=True).load(census_detail_dict)
+        detail_data = [
+            {**row, "census_master_id": census_master.census_master_id}
+            for row in self.processed_data
+        ]
+        census_details = sch.SchemaCensusDetail(many=True).load(detail_data)
         db.session.add_all(census_details)
         census_master.census_details = census_details
         db.session.commit()

@@ -27,6 +27,7 @@ class ModelCensusDetail(BaseModel):
             ondelete="CASCADE",
         )
     )
+    tab = db.Column(db.String(200), nullable=False)
     birthdate = db.Column(db.Date, nullable=False)
     relationship = db.Column(db.String(50), nullable=False)
     tobacco_disposition = db.Column(db.String(50), nullable=False)

@@ -28,6 +28,7 @@ class SchemaCensusMasterDropdown(BaseSchema):
 
 
 class SchemaCensusUpload(ma.Schema):
+    tab = ma.String()
     birthdate = ma.Date()
     relationship = ma.String()
     tobacco_disposition = ma.String()
@@ -83,3 +84,10 @@ class SchemaSaveAgeOutput(ma.Schema):
     save_age_rate = ma.Float()
     new_rate = ma.Float()
     diff = ma.Float()
+
+
+class SchemaCensusConfigLLM(ma.Schema):
+    tab_name = ma.String()
+    start_row_number = ma.Integer()
+    start_column_number = ma.Integer()
+    column_mapper = ma.Dict()

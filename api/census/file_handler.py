@@ -3,6 +3,8 @@ import re
 import pandas as pd
 from io import BytesIO
 from extensions import db
+from typing import Dict
+from collections import defaultdict
 from . import models as md
 from . import schemas as sch
 from . import mixins as mix
@@ -15,75 +17,137 @@ class BaseFileHandler:
         self.filepath = file.filename
         self.file_extension = os.path.splitext(file.filename)[1]
 
+        self.dfs = {}
+        self.metadata = defaultdict(dict)
+
+    @property
+    def multiple_tabs(self):
+        return len(self.dfs.keys()) != 1
+
+    def identify_header_row(self, df: pd.DataFrame, nrows=20, threshold=0.5):
+        """
+        Helper function to identify which row contains the header
+        """
+        for i, row in df.iloc[:nrows].iterrows():
+            if row.isnull().sum() / len(row) < threshold:
+                return i
+        return None
+
+    def identify_first_column(self, df: pd.DataFrame, nrows=20, threshold=0.1):
+        """
+        Helper function to identify which column contains the first data
+        """
+        for i, col in df.iloc[:nrows].items():
+            if col.isnull().sum() / len(col) < threshold:
+                return i
+        return None
+
     def save(self):
         self.file.save(self.file.filename)
         return self.file.filename
 
     def read(self):
         if self.file_extension in [".xlsx", ".xls", ".xlsm"]:
-            return self._read_excel(self.file)
+            self.dfs = self._read_excel(self.file)
+            return self.dfs
         elif self.file_extension == ".csv":
-            return pd.read_csv(self.file)
+            self.dfs = {"default": pd.read_csv(self.file)}
         else:
             raise ValueError("Invalid file format")
 
     @classmethod
     def _read_excel(cls, file):
-        return pd.read_excel(file)
+        return pd.read_excel(file, header=None, sheet_name=None, index_col=None)
 
-
-class CensusUploadHandler(BaseFileHandler):
-    @staticmethod
-    def get_column_mapper(df: pd.DataFrame):
-        col_dict = {
-            "birthdate": None,
-            "relationship": None,
-            "tobacco_disposition": None,
-            "effective_date": None,
+    def raw_data(self, nrows=10):
+        return {
+            tab: df.iloc[:nrows]
+            .astype("str")
+            .rename(columns={col: f"col{i:03}" for i, col in enumerate(df.columns)})
+            .to_dict("records")
+            for tab, df in self.dfs.items()
         }
-        BIRTHDATE_LABELS = ["birthdate", "dob", "dateofbirth", "birthday"]
-        RELATIONSHIP_LABELS = ["relationship", "rel", "relation"]
-        TOBACCO_DISPOSITION_LABELS = [
-            "tobacco",
-            "tobaccodisposition",
-            "tobaccostatus",
-            "smoker",
-            "smokerstatus",
-            "smokerdisposition",
-        ]
-        EFFECTIVE_DATE_LABELS = [
-            "effective",
-            "effectivedate",
-            "eff",
-            "ced",
-            "coverageeffective",
-            "coverageeffectivedate",
-            "dateofissue",
-            "issuedate",
-        ]
 
-        for col in df.columns:
-            adjcol = re.sub(r"[^A-Za-z0-9]", "", col).lower()
-            if adjcol in BIRTHDATE_LABELS:
-                col_dict["birthdate"] = col
-            elif adjcol in RELATIONSHIP_LABELS:
-                col_dict["relationship"] = col
-            elif adjcol in TOBACCO_DISPOSITION_LABELS:
-                col_dict["tobacco_disposition"] = col
-            elif adjcol in EFFECTIVE_DATE_LABELS:
-                col_dict["effective_date"] = col
 
-        if None in col_dict.values():
-            raise ValueError("Invalid column names")
+class CensusUploadHandler(mix.CensusProcessorLLMMixin, BaseFileHandler):
+    def preprocess(self, dfs: Dict[str, pd.DataFrame]):
+        data = {
+            tab: {
+                "start_row": self.identify_header_row(df),
+                "start_col": self.identify_first_column(
+                    df.iloc[self.identify_header_row(df) :]
+                ),
+            }
+            for tab, df in dfs.items()
+        }
+        return data
 
-        col_mapper = {v: k for k, v in col_dict.items()}
-        return col_mapper
+    def select_data_range(self, dfs: Dict[str, pd.DataFrame], census_config):
+        selected_tabs = [census_config["tab_name"] for census_config in census_config]
+        selected_dfs = {tab: df for tab, df in dfs.items() if tab in selected_tabs}
+        for tab in dfs.keys():
+            self.metadata[tab]["is_tab_selected"] = tab in selected_tabs
 
-    @classmethod
-    def _read_excel(cls, file):
-        df = pd.read_excel(file)
-        col_mapper = cls.get_column_mapper(df)
-        return df.rename(columns=col_mapper)
+        for config in census_config:
+            tab_name = config["tab_name"]
+            llm_start_row_number = config["start_row_number"] - 1
+            llm_start_column_number = config["start_column_number"] - 1
+
+            try:
+                df = selected_dfs[tab_name]
+            except KeyError:
+                raise ValueError(f"Could not find tab {tab_name}")
+
+            header = df.iloc[llm_start_row_number]
+            df = df.iloc[(llm_start_row_number + 1) :, llm_start_column_number:]
+            df.columns = header[llm_start_column_number:]
+
+            selected_dfs[tab_name] = df
+            self.metadata[tab_name]["start_row"] = llm_start_row_number
+            self.metadata[tab_name]["start_col"] = llm_start_column_number
+
+        return selected_dfs
+
+    def map_columns(self, dfs: Dict[str, pd.DataFrame], census_config):
+        for config in census_config:
+            tab_name = config["tab_name"]
+            if tab_name not in dfs:
+                raise ValueError(f"Could not find tab {tab_name}")
+
+            column_mapper = config["column_mapper"]
+            dfs[tab_name] = dfs[tab_name].rename(columns=column_mapper)
+            self.metadata[tab_name]["column_mapper"] = column_mapper
+        return dfs
+
+    def stack(self, dfs: Dict[str, pd.DataFrame]):
+        schema = sch.SchemaCensusUpload(many=True)
+        for tab, df in dfs.items():
+            df["tab"] = tab
+
+        df_stack = pd.concat(dfs.values(), ignore_index=True)
+        data = df_stack.to_dict(orient="records")
+        return schema.dump(data)
+
+    def process(self):
+        # read the file
+        dfs = self.read()
+        # preprocessor
+        preprocessor = self.preprocess(dfs)
+
+        # if multiple tabs, identify which tabs contain census data
+        census_config = self.llm_identify_tabs_containing_censuses(
+            dfs, preprocess=preprocessor
+        )
+        if not census_config:
+            raise ValueError("Could not identify census data in the file")
+
+        # select the data range of each tab
+        dfs = self.select_data_range(dfs, census_config)
+
+        # map the columns to the standard schema
+        dfs = self.map_columns(dfs, census_config)
+        # save the data to the database
+        return self.stack(dfs)
 
     def save(self):
         # create the census master record w/o details

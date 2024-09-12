@@ -1,9 +1,15 @@
+import os
+import json
+import pandas as pd
 import datetime
+import anthropic
+from typing import Dict
 from extensions import db
 from sqlalchemy import and_, literal, func, cast, text, case
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.functions import coalesce
 from . import models as md
+from . import schemas as sch
 
 
 class CensusStatsMixin:
@@ -270,3 +276,143 @@ class RateDetailMixin:
         data = cls.unbounded_min(data, kwargs.get("umin", "N"))
         data = cls.unbounded_max(data, kwargs.get("umax", "N"))
         return data
+
+
+class CensusProcessorLLMMixin:
+    LLM_CLIENT = anthropic.Anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+    )
+
+    SYSTEM_PROMPT__TABS_CONTAINING_CENSUSES = """
+    The prompt contains multiple Excel tabs, each of which has its data concatentated together in a comma-separated string.
+    Your job is to identify which tabs, if any, contain census data. 
+    A census file will be tabular data with columns that include the following columns: 
+    - relationship
+    - tobacco_disposition
+    - effective_date
+    The file will also contain at least one of 
+    - birthdate
+    - issue_age
+    The columns may be named differently. 
+    There may be blank rows and columns at the top of the file.
+    There may be more columns than those listed, but those are the minimum required columns.
+    If a file contains census data, you should return: 
+    - The tab name
+    - The row number containing the column names
+    - The column number of the first column in the data
+    - A mapper which maps the column names in the file to the required columns
+    The row containing the column names must be the first row in the tab with more than 50% non-empty cells. 
+    Return the data in the following format:
+    [
+        {
+            "tab_name": "Sheet1",
+            "start_row_number": 1,
+            "start_column_number": 1,
+            "column_mapper": {
+                "relationship": "relationship",
+                "tobacco_disposition": "tobacco_disposition",
+                "effective_date": "effective_date",
+                "birthdate": "birthdate", 
+                "issue_age": "issue_age"
+            }
+        }, 
+        ...
+    ]
+    Use 1-based indexing for row and column numbers.
+    The keys in the column_mapper should be the current column names. 
+    The values should be the required column names.
+    Be concise. Do not include any extraneous information.
+"""
+    SYSTEM_PROMPT__COLUMN_MAPPER = """
+    The prompt contains data from a single Excel tab whose data is concatentated together in a comma-separated string.
+    Your job is to map the columns into a common schema with the following columns: 
+    - relationship
+    - tobacco_disposition
+    - effective_date
+    The file will also contain at least one of 
+    - birthdate
+    - issue_age
+    The columns may be named differently. 
+    There may be blank rows and columns at the top of the file.
+    There may be more columns than those listed, but those are the minimum required columns.
+    You should return a mapper which maps the column names in the file to the required columns
+    Return the data in the following format:
+        {
+            "column_mapper": {
+                "relationship": "relationship",
+                "tobacco_disposition": "tobacco_disposition",
+                "effective_date": "effective_date",
+                "birthdate": "birthdate", 
+                "issue_age": "issue_age"
+            }
+        }
+    The keys in the column_mapper should be the current column names. 
+    The values should be the required column names.
+    Be concise. Do not include any extraneous information.
+"""
+
+    @classmethod
+    def tab_to_text(cls, dfs: Dict[str, pd.DataFrame], nrow=20, *args, **kwargs):
+        return {
+            tab: df.iloc[:nrow].to_csv(index=False, header=False)
+            for tab, df in dfs.items()
+            if df is not None
+        }
+
+    @classmethod
+    def preprocessor_to_text(cls, data: Dict[str, Dict[str, int]]):
+        return ". ".join(
+            [
+                f"I believe that tab, `{tab_name}`, has data starting in row {vals['start_row'] + 1} and column {vals['start_col'] + 1}"
+                for tab_name, vals in data.items()
+                if vals["start_row"] is not None and vals["start_col"] is not None
+            ]
+        )
+
+    @classmethod
+    def llm_identify_tabs_containing_censuses(
+        cls, dfs: Dict[str, pd.DataFrame], preprocess=None, **kwargs
+    ):
+        tab_strings = cls.tab_to_text(dfs, **kwargs)
+        prompt = "\n\n".join(
+            [f"{tab}\n{tab_string}" for tab, tab_string in tab_strings.items()]
+        )
+        system_prompt = cls.SYSTEM_PROMPT__TABS_CONTAINING_CENSUSES
+        if preprocess is not None:
+            system_prompt = (
+                system_prompt + "\n\n" + cls.preprocessor_to_text(preprocess)
+            )
+
+        message = cls.LLM_CLIENT.messages.create(
+            model=os.getenv("ANTHROPIC_MODEL_ID"),
+            system=system_prompt,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        try:
+            mapper = [json.loads(msg.text) for msg in message.content][0]
+            schema = sch.SchemaCensusConfigLLM(many=True)
+            mapper = schema.load(mapper)
+        except Exception:
+            raise ValueError("Unable to process the file by the LLM")
+        else:
+            return mapper
+
+    @classmethod
+    def llm_identify_column_mapping(cls, df: pd.DataFrame, **kwargs):
+        prompt = cls.tab_to_text({"default": df}, **kwargs)["default"]
+
+        message = cls.LLM_CLIENT.messages.create(
+            model=os.getenv("ANTHROPIC_MODEL_ID"),
+            system=cls.SYSTEM_PROMPT__COLUMN_MAPPER,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        try:
+            mapper = [json.loads(msg.text) for msg in message.content][0]
+        except Exception:
+            raise ValueError("Unable to process column mapping provided by the LLM")
+        else:
+            return mapper

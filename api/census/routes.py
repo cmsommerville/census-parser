@@ -12,6 +12,7 @@ CENSUS_ROUTES = {
     "/census/<int:id>/details": res.CRUDCensusDetailList,
     "/census/<int:id>/stats": res.CensusStats,
     "/census/upload": res.CensusUpload,
+    "/census/parse": res.CensusParser,
     "/rates": res.CRUDRateMaster,
     "/rates/upload": res.RateUpload,
     "/rates/<int:id>": res.CRUDRateMaster,

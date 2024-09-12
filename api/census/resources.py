@@ -1,6 +1,8 @@
 import os
 import datetime
+import json
 import pandas as pd
+import anthropic
 from extensions import db
 from typing import List
 from flask import request, current_app
@@ -304,3 +306,71 @@ class RateUpload(Resource):
         rate_master = file_handler.save(**request.args)
         output_data = sch.SchemaRateMaster(exclude=("rate_details",)).dump(rate_master)
         return output_data, 200
+
+        #     col_dict["birthdate"] = col
+        # elif adjcol in RELATIONSHIP_LABELS:
+        #     col_dict["relationship"] = col
+        # elif adjcol in TOBACCO_DISPOSITION_LABELS:
+        #     col_dict["tobacco_disposition"] = col
+        # elif adjcol in EFFECTIVE_DATE_LABELS:
+        #     col_dict["effective_date"] = col
+
+
+class CensusParser(Resource):
+    SYSTEM_PROMPT = """The prompt contains multiple CSV files, each as a string.
+    Your job is to identify which files, if any, contain census data. 
+    A census file will be tabular data with columns that include the following columns: 
+    - relationship
+    - tobacco_disposition
+    - effective_date
+    The file will also contain at least one of 
+    - birthdate
+    - issue_age
+    The columns may be named differently. 
+    There may be blank rows and columns at the top of the file.
+    There may be more columns than those listed, but those are the minimum required columns.
+    If a file contains census data, you should return the file name, the row number containing the column names, 
+    the column number of the first column in the data, and a mapper which maps the column names in the file to the required columns. 
+    Use 1-based indexing for row and column numbers.
+    Return the data in the following format:
+    [
+        {
+            "file_name": "file_name",
+            "start_row_number": "1",
+            "start_column_number": "1",
+            "column_mapper": {
+                "relationship": "relationship",
+                "tobacco_disposition": "tobacco_disposition",
+                "effective_date": "effective_date",
+                "birthdate": "birthdate", 
+                "issue_age": "issue_age"
+            }
+        }, 
+        ...
+    ]
+    The keys in the column_mapper should be the current column names. 
+    The values should be the required column names.
+    Be concise. Do not include any extraneous information.
+    """
+
+    def post(self):
+        uploaded_file = request.files["file"]
+        custom_filename = request.form.get("name", uploaded_file.filename)
+        filename = uploaded_file.filename
+        if filename == "":
+            return {"status": "error", "msg": "No file selected"}, 400
+        file_ext = os.path.splitext(filename)[1]
+        if file_ext not in current_app.config["FILE_UPLOAD_EXTENSIONS"]:
+            return {"status": "error", "msg": "Invalid file format"}, 400
+
+        file_handler = CensusUploadHandler(uploaded_file, filename=custom_filename)
+        config = file_handler.process()
+        raw_data = file_handler.raw_data()
+        return {
+            "status": "success",
+            "msg": {
+                "data": config,
+                "metadata": dict(file_handler.metadata),
+                "raw_data": raw_data,
+            },
+        }, 200

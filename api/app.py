@@ -8,6 +8,7 @@ from extensions import init_extensions
 def create_app():
     ENV = os.environ.get("ENV", "DEV")
     config = CONFIG.get(ENV)
+    print(config.SQLALCHEMY_DATABASE_URI)
     app = Flask(__name__)
     app.config.from_object(config)
 

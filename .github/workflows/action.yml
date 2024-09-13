@@ -48,5 +48,4 @@ jobs:
             echo "${{ secrets.PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             cd ${{ secrets.WORK_DIR }}
             docker compose pull
-            [ -f .env ] && export $(grep -v '^#' .env | xargs)
             docker compose up -d

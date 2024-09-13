@@ -1,7 +1,5 @@
 import os
 
-print(os.getenv("DATABASE_URI"))
-
 
 class BaseConfig:
     PROPAGATE_EXCEPTIONS = True
@@ -17,11 +15,11 @@ class DevConfig(BaseConfig):
 
 
 class TestConfig(BaseConfig):
-    pass
+    SESSION_COOKIE_SECURE = False
 
 
 class ProdConfig(BaseConfig):
-    pass
+    SESSION_COOKIE_SECURE = True
 
 
 CONFIG = {"DEV": DevConfig(), "TEST": TestConfig(), "PROD": ProdConfig()}

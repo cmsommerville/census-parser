@@ -1,5 +1,7 @@
 import os
 
+print(os.getenv("DATABASE_URI"))
+
 
 class BaseConfig:
     PROPAGATE_EXCEPTIONS = True

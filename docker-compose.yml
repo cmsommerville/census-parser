@@ -10,10 +10,11 @@ services:
     depends_on:
       - api
   api:
+    user: root
     container_name: census-parser-api
     image: ghcr.io/cmsommerville/census-parser-api:latest
     env_file: 
-      - path: ./.env
+      - path: .env
         required: false
     build: 
       context: ./api

@@ -13,7 +13,7 @@ services:
     container_name: census-parser-api
     image: ghcr.io/cmsommerville/census-parser-api:latest
     env_file: 
-      - path: ./api/.env
+      - path: ./.env
         required: false
     build: 
       context: ./api

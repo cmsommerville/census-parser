@@ -2,7 +2,7 @@
 FROM python:3.11
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get install sqlite3
+RUN apt install sqlite3
 WORKDIR /api
 
 COPY requirements.txt requirements.txt

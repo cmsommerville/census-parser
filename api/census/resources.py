@@ -353,10 +353,13 @@ class CensusParser(Resource):
             return {"status": "error", "msg": "Invalid file format"}, 400
 
         file_handler = CensusUploadHandler(uploaded_file, filename=custom_filename)
-        file_handler.process()
-        census_master = file_handler.save()
-        output_data = sch.SchemaCensusMaster().dump(census_master)
-        raw_data = file_handler.raw_data()
+        try:
+            file_handler.process()
+            census_master = file_handler.save()
+            output_data = sch.SchemaCensusMaster().dump(census_master)
+            raw_data = file_handler.raw_data()
+        except Exception as e:
+            return {"status": "error", "msg": str(e)}, 400
         return {
             "data": output_data,
             "metadata": dict(file_handler.metadata),
